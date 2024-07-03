@@ -1,0 +1,72 @@
+#include <SPI.h>
+#include <RF24.h>
+
+RF24 radio(8, 7); // CE, CSN pins
+const int switchPin = 2; // Pin where the switch is connected
+
+struct SensorData {
+  float tempHTU;
+  float gyroX;
+  float gyroY;
+  float gyroZ;
+  float pressureBMP;
+  int light;
+  double latitude;
+  double longitude;
+  bool switchState;
+};
+
+void setup() {
+  pinMode(switchPin, INPUT);
+  Serial.begin(9600);
+  radio.begin();
+  radio.openReadingPipe(1, 0xABCDABCD01LL); // Set the same address as the transmitter
+  radio.openWritingPipe(0xABCDABCD02LL); // Set the address for sending switch state
+  radio.setPALevel(RF24_PA_LOW); // Set the power level
+  radio.startListening();
+}
+
+void loop() {
+  if (radio.available()) {
+    SensorData sensorData;
+    radio.read(&sensorData, sizeof(sensorData));
+
+    // Read the switch state
+    sensorData.switchState = digitalRead(switchPin) == HIGH;
+
+    // Print received sensor data
+
+    Serial.print("Temperature (HTU21D): ");
+    Serial.print(sensorData.tempHTU);
+    Serial.println(" °C");
+
+    Serial.print("Gyro X: ");
+    Serial.print(sensorData.gyroX);
+    Serial.print(" rad/s, Gyro Y: ");
+    Serial.print(sensorData.gyroY);
+    Serial.print(" rad/s, Gyro Z: ");
+    Serial.print(sensorData.gyroZ);
+    Serial.println(" rad/s");
+
+    Serial.print("Pressure (BMP180): ");
+    Serial.print(sensorData.pressureBMP);
+    Serial.println(" hPa");
+
+    Serial.print("Light (TEMPT6000): ");
+    Serial.print(sensorData.light);
+    Serial.println(" %");
+
+    Serial.print("Latitude: ");
+    Serial.println(sensorData.latitude, 6);
+    Serial.print("Longitude: ");
+    Serial.println(sensorData.longitude, 6);
+
+    Serial.print("Switch State: ");
+    Serial.println(sensorData.switchState ? "ON" : "OFF");
+
+    // Transmit the switch state back to the transmitter
+    radio.stopListening();
+    radio.write(&sensorData.switchState, sizeof(sensorData.switchState));
+    radio.startListening();
+  }
+}
