@@ -19,5 +19,7 @@ Solar Panel and Antenna Deployment: Incorporate automatic solar panel and antenn
 Design Philosophy
 Central to the CubeSat's design philosophy is modularity and miniaturization, key characteristics that distinguish CubeSats from traditional satellites. The compact size and standardized form factor of CubeSats allow for rapid development and deployment, reducing costs and lead times associated with conventional space missions. Moreover, modularity enables flexibility in payload configurations, facilitating the integration of diverse sensors and instruments tailored to specific mission objectives.
 
-# Circuit Diagram
-Below is the circuit diagram for the CubeSat-IRIS project, which illustrates the connections and components used in the system.
+# Structure
+Below is the Structure for the CubeSat-IRIS project, which illustrates the connections and components used in the system.
+![image](https://github.com/deepak99975/CubeSat-IRIS/assets/136265214/252acff2-165f-45f5-9eed-157e154860df)
+
