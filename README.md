@@ -1,5 +1,8 @@
 # CubeSat-IRIS (CubeSat Infrared Imaging Satellite)
 
+![Screenshot (122)](https://github.com/deepak99975/CubeSat-IRIS/assets/136265214/40d1b61b-1823-4a84-832e-f7ea3c60b134)
+
+
 # Introduction
 CubeSats are a class of nanosatellites with a standardized form factor and size. The typical CubeSat size is based on a "one unit" or "1U," which measures 10x10x10 cm. CubeSats can be expanded to larger sizes such as 1.5U, 2U, 3U, 6U, and even 12U. Initially developed in 1999 as a platform for education and space exploration by Stanford University and California Polytechnic State University at San Luis Obispo (Cal Poly), CubeSats have evolved into their own industry with ever-increasing capabilities. Today, CubeSats provide an affordable platform for scientific research, innovative technology showcases, and sophisticated mission ideas utilizing constellations, swarms, and disassembled systems.
 
