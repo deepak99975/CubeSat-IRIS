@@ -1,0 +1,150 @@
+#include <Wire.h>
+#include <SPI.h>
+#include <RF24.h>
+#include "SparkFunHTU21D.h"
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <TinyGPS++.h>
+#include <Adafruit_BMP085.h>
+#include <SoftwareSerial.h>
+
+int temt6000Pin = A0;
+float light;
+int light_value;
+RF24 radio(8, 7); // CE, CSN pins
+const int ledPin = 3; // Pin where the LED is connected
+
+HTU21D myHumidity;
+Adafruit_MPU6050 mpu;
+TinyGPSPlus gps;
+Adafruit_BMP085 bmp; // Create BMP180 object
+SoftwareSerial gpsSerial(4, 5); // RX, TX pins for GPS module
+
+struct SensorData {
+  float tempHTU;
+  float gyroX;
+  float gyroY;
+  float gyroZ;
+  float pressureBMP; // Pressure from BMP180
+  int light;
+  double latitude;
+  double longitude;
+  bool switchState;
+};
+
+void setup() {
+  Serial.begin(9600); // Initialize serial communication at 9600 baud
+  gpsSerial.begin(9600); // Initialize GPS serial communication
+  pinMode(ledPin, OUTPUT);// Set the LED pin as output
+  pinMode(temt6000Pin, INPUT);
+  radio.begin();
+  radio.openWritingPipe(0xABCDABCD01LL); // Set the address for communication
+  radio.openReadingPipe(1, 0xABCDABCD02LL); // Set the address for receiving switch state
+  radio.setPALevel(RF24_PA_LOW); // Set the power level
+  radio.stopListening();
+
+  myHumidity.begin();
+
+  if (!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {}
+  }
+
+  if (!bmp.begin()) {
+    Serial.println("Failed to initialize BMP180 sensor!");
+    while (1) {}
+  }
+}
+
+void loop() {
+  // Read humidity and temperature from HTU21D
+  float humidityHTU = myHumidity.readHumidity();
+  float tempHTU = myHumidity.readTemperature();
+
+  // Read gyroscope data from MPU6050
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  // Read GPS data
+  while (gpsSerial.available() > 0) {
+    gps.encode(gpsSerial.read());
+  }
+  double latitude = gps.location.isValid() ? gps.location.lat() : 0.0;
+  double longitude = gps.location.isValid() ? gps.location.lng() : 0.0;
+
+  // Read pressure from BMP180
+  float pressureBMP = bmp.readPressure() / 100.0F; // Convert Pa to hPa
+ 
+  int light_value = analogRead(temt6000Pin);
+  int light = light_value * 0.0976;
+  
+  // Prepare data packet
+  SensorData sensorData = {
+    tempHTU,
+    g.gyro.x, 
+    g.gyro.y, 
+    g.gyro.z,
+    pressureBMP,
+    light, 
+    latitude,
+    longitude,
+    false // Initialize switch state as false
+  };
+
+  // Transmit sensor data
+  radio.write(&sensorData, sizeof(sensorData));
+
+  // Start listening for switch state
+  radio.startListening();
+  unsigned long startTime = millis();
+  bool switchReceived = false;
+  while (millis() - startTime < 200) { // Wait for up to 200ms
+    if (radio.available()) {
+      radio.read(&sensorData.switchState, sizeof(sensorData.switchState));
+      switchReceived = true;
+      break;
+    }
+  }
+  radio.stopListening();
+
+  // Control LED based on switch state
+  if (switchReceived) {
+    if (sensorData.switchState) {
+      digitalWrite(ledPin, HIGH); // Turn LED on
+    } else {
+      digitalWrite(ledPin, LOW); // Turn LED off
+    }
+  } else {
+    Serial.println("Switch state not received");
+  }
+
+  Serial.print("Temperature (HTU21D): ");
+  Serial.print(sensorData.tempHTU);
+  Serial.println(" °C");
+
+  Serial.print("Gyro X: ");
+  Serial.print(sensorData.gyroX);
+  Serial.print(" rad/s, Gyro Y: ");
+  Serial.print(sensorData.gyroY);
+  Serial.print(" rad/s, Gyro Z: ");
+  Serial.print(sensorData.gyroZ);
+  Serial.println(" rad/s");
+
+  Serial.print("Pressure (BMP180): ");
+  Serial.print(sensorData.pressureBMP);
+  Serial.println(" hPa");
+
+  Serial.print("Light (TEMPT6000): ");
+  Serial.print(sensorData.light);
+  Serial.println(" %");
+
+  Serial.print("Latitude: ");
+  Serial.println(sensorData.latitude, 6);
+  Serial.print("Longitude: ");
+  Serial.println(sensorData.longitude, 6);
+
+  Serial.print("Switch State: ");
+  Serial.println(sensorData.switchState ? "ON" : "OFF");
+
+  delay(1000); // Wait for 1 second before next measurement
+}
